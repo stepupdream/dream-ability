@@ -32,7 +32,7 @@ class MigrationCommandServiceProvider extends ServiceProvider implements Deferra
             ], 'dream-ability');
 
             $this->app->singleton('command.migration.run', function () {
-                return new MigrationCommand();
+                return $this->app->make(MigrationCommand::class);
             });
 
             $this->commands(array_values($this->commands));
