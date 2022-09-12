@@ -6,7 +6,7 @@ namespace StepUpDream\DreamAbility\Database\Providers;
 
 use Illuminate\Contracts\Support\DeferrableProvider;
 use Illuminate\Support\ServiceProvider;
-use StepUpDream\DreamAbility\Database\Console\Migrations\MigrationCommand;
+use StepUpDream\DreamAbility\Database\Console\Migrations\Basic\MigrationCommand;
 
 class MigrationCommandServiceProvider extends ServiceProvider implements DeferrableProvider
 {

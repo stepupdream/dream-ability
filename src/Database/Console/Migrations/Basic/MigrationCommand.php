@@ -2,25 +2,20 @@
 
 declare(strict_types=1);
 
-namespace StepUpDream\DreamAbility\Database\Console\Migrations;
+namespace StepUpDream\DreamAbility\Database\Console\Migrations\Basic;
 
-use Illuminate\Console\ConfirmableTrait;
 use Illuminate\Support\Facades\File;
 use LogicException;
-use StepUpDream\DreamAbility\Database\Migrations\Migrator;
-use StepUpDream\DreamAbilitySupport\Console\BaseCommand;
-use StepUpDream\DreamAbilitySupport\Supports\File\FileOperation;
+use StepUpDream\DreamAbility\Database\Console\Migrations\BaseMigrationCommand;
 
-class MigrationCommand extends BaseCommand
+class MigrationCommand extends BaseMigrationCommand
 {
-    use ConfirmableTrait;
-
     /**
      * The name and signature of the console command.
      *
      * @var string
      */
-    protected $signature = 'dream-ability:migration {--production}';
+    protected $signature = 'dream-ability:migration-basic {--production}';
 
     /**
      * The console command description.
@@ -28,20 +23,6 @@ class MigrationCommand extends BaseCommand
      * @var string
      */
     protected $description = 'run migration';
-
-    /**
-     * Create a new console command instance.
-     *
-     * @param  \StepUpDream\DreamAbilitySupport\Supports\File\FileOperation  $fileOperation
-     * @param  \StepUpDream\DreamAbility\Database\Migrations\Migrator  $migrator
-     * @return void
-     */
-    public function __construct(
-        protected FileOperation $fileOperation,
-        protected Migrator $migrator
-    ) {
-        parent::__construct();
-    }
 
     /**
      * Execute the console command.

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace StepUpDream\DreamAbility\Database\Migrations;
+namespace StepUpDream\DreamAbility\Database\Migrations\Basic;
 
 use Illuminate\Console\OutputStyle;
 use Illuminate\Console\View\Components\Info;
@@ -28,7 +28,7 @@ class Migrator
     /**
      * MigrationRevisionManager constructor.
      *
-     * @param  \StepUpDream\DreamAbility\Database\Migrations\MigrationRepository  $migrationRepository
+     * @param  \StepUpDream\DreamAbility\Database\Migrations\Basic\MigrationRepository  $migrationRepository
      * @param  \StepUpDream\DreamAbilitySupport\Supports\File\FileOperation  $fileOperation
      * @param  \Illuminate\Database\ConnectionResolverInterface  $resolver
      */
