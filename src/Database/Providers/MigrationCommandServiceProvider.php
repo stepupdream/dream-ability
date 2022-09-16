@@ -6,7 +6,8 @@ namespace StepUpDream\DreamAbility\Database\Providers;
 
 use Illuminate\Contracts\Support\DeferrableProvider;
 use Illuminate\Support\ServiceProvider;
-use StepUpDream\DreamAbility\Database\Console\Migrations\Basic\MigrationCommand;
+use StepUpDream\DreamAbility\Database\Console\Migrations\Basic\InstallCommand;
+use StepUpDream\DreamAbility\Database\Console\Migrations\Basic\MigrateCommand;
 
 class MigrationCommandServiceProvider extends ServiceProvider implements DeferrableProvider
 {
@@ -16,7 +17,8 @@ class MigrationCommandServiceProvider extends ServiceProvider implements Deferra
      * @var array
      */
     protected array $commands = [
-        'CommandMigrationRun' => 'command.migration.run',
+        'MigrateBasicRun' => 'command.migrate.migrate-basic',
+        'InstallBasicRun' => 'command.migrate.install-basic',
     ];
 
     /**
@@ -31,8 +33,12 @@ class MigrationCommandServiceProvider extends ServiceProvider implements Deferra
                 __DIR__.'/../Config/stepupdream/migration.php' => config_path('stepupdream/migration.php'),
             ], 'dream-ability');
 
-            $this->app->singleton('command.migration.run', function () {
-                return $this->app->make(MigrationCommand::class);
+            $this->app->singleton('command.migrate.migrate-basic', function () {
+                return $this->app->make(MigrateCommand::class);
+            });
+
+            $this->app->singleton('command.migrate.install-basic', function () {
+                return $this->app->make(InstallCommand::class);
             });
 
             $this->commands(array_values($this->commands));
