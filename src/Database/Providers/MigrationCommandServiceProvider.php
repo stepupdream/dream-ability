@@ -8,17 +8,19 @@ use Illuminate\Contracts\Support\DeferrableProvider;
 use Illuminate\Support\ServiceProvider;
 use StepUpDream\DreamAbility\Database\Console\Migrations\Basic\InstallCommand;
 use StepUpDream\DreamAbility\Database\Console\Migrations\Basic\MigrateCommand;
+use StepUpDream\DreamAbility\Database\Migrations\Basic\MigrationRepository;
+use StepUpDream\DreamAbility\Database\Migrations\Basic\MigrationRepositoryInterface;
 
 class MigrationCommandServiceProvider extends ServiceProvider implements DeferrableProvider
 {
     /**
      * The commands to be registered.
      *
-     * @var array
+     * @var array<int, string>
      */
     protected array $commands = [
-        'MigrateBasicRun' => 'command.migrate.migrate-basic',
-        'InstallBasicRun' => 'command.migrate.install-basic',
+        1 => 'command.migrate.migrate-basic',
+        2 => 'command.migrate.install-basic',
     ];
 
     /**
@@ -33,23 +35,35 @@ class MigrationCommandServiceProvider extends ServiceProvider implements Deferra
                 __DIR__.'/../Config/stepupdream/migration.php' => config_path('stepupdream/migration.php'),
             ], 'dream-ability');
 
-            $this->app->singleton('command.migrate.migrate-basic', function () {
+            $this->app->singleton($this->commands[1], function () {
                 return $this->app->make(MigrateCommand::class);
             });
 
-            $this->app->singleton('command.migrate.install-basic', function () {
+            $this->app->singleton($this->commands[2], function () {
                 return $this->app->make(InstallCommand::class);
             });
 
             $this->commands(array_values($this->commands));
+
+            $this->app->bind(MigrationRepositoryInterface::class, function ($app, $parameters) {
+                $tableName = config('stepupdream.migration.basic.version_control_table_name');
+
+                return new MigrationRepository($parameters[0], $app['db'], $tableName);
+            });
         }
     }
 
     /**
      * Get the services provided by the provider.
+     *
+     * @return string[]
      */
     public function provides(): array
     {
-        return array_values($this->commands);
+        return [
+            $this->commands[1],
+            $this->commands[2],
+            MigrationRepositoryInterface::class,
+        ];
     }
 }

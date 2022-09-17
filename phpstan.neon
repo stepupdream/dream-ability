@@ -10,4 +10,3 @@ parameters:
     level: 8
 
     excludePaths:
-        - ./*/*/FileToBeExcluded.php

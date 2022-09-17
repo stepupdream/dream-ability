@@ -55,13 +55,9 @@ class MigrateCommand extends BaseMigrationCommand
             return;
         }
 
-        $definitionDatabaseDirectoryPath = config('stepupdream.migration.basic.definition_database_directory_path');
         $migrationDirectoryParentPath = config('stepupdream.migration.basic.migration_directory_parent_path');
 
-        if ($this->fileOperation->isSameFileNameExist($definitionDatabaseDirectoryPath)) {
-            throw new LogicException('Avoid naming tables the same. : '.$definitionDatabaseDirectoryPath);
-        }
-
+        $this->verifySameFileNameExist();
         $this->prepareDatabase();
         $maxVersion = $this->maxVersion();
         $usedConnectionName = $this->usedConnectionName();
@@ -80,6 +76,18 @@ class MigrateCommand extends BaseMigrationCommand
     }
 
     /**
+     * Whether a file with the same filename exists or not.
+     */
+    protected function verifySameFileNameExist(): void
+    {
+        $definitionDatabaseDirectoryPath = config('stepupdream.migration.basic.definition_database_directory_path');
+
+        if ($this->fileOperation->isSameFileNameExist($definitionDatabaseDirectoryPath)) {
+            throw new LogicException('Avoid naming tables the same. : '.$definitionDatabaseDirectoryPath);
+        }
+    }
+
+    /**
      * Prepare the migration database for running.
      *
      * @return void
@@ -91,13 +99,7 @@ class MigrateCommand extends BaseMigrationCommand
 
         foreach ($connectionNames as $connectionName) {
             if (! $this->repositoryExists($connectionName)) {
-                $callbacks[] = function () use ($connectionName) {
-                    $this->components->task('Creating migration table', function () use ($connectionName) {
-                        return $this->callSilent('dream-ability-migrate:install-basic', [
-                                'name' => $connectionName,
-                            ]) === 0;
-                    });
-                };
+                $callbacks[] = fn () => $this->migrate($connectionName);
             }
         }
 
@@ -113,9 +115,22 @@ class MigrateCommand extends BaseMigrationCommand
     }
 
     /**
+     * Run "dream-ability-migrate:install-basic".
+     *
+     * @param  string  $connectionName
+     * @return void
+     */
+    protected function migrate(string $connectionName): void
+    {
+        $this->components->task('Creating migration table', function () use ($connectionName) {
+            return $this->callSilent('dream-ability-migrate:install-basic', ['name' => $connectionName]) === 0;
+        });
+    }
+
+    /**
      * Obtain the connection name list to be use.
      *
-     * @return array
+     * @return string[]
      */
     protected function useConnectionNames(): array
     {
@@ -181,7 +196,6 @@ class MigrateCommand extends BaseMigrationCommand
     {
         return $this->migrator->repositoryExists($connectionName);
     }
-
 
     /**
      * Max version.

@@ -1,2 +1,7 @@
 parameters:
 	ignoreErrors:
+		-
+			message: "#^Access to an undefined property object\\:\\:\\$version\\.$#"
+			count: 1
+			path: src/Database/Migrations/Basic/MigrationRepository.php
+

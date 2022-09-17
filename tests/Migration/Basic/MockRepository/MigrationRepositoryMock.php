@@ -2,13 +2,23 @@
 
 declare(strict_types=1);
 
-namespace StepUpDream\DreamAbility\Database\Migrations\Basic;
+namespace StepUpDream\DreamAbility\Test\Migration\Basic\MockRepository;
 
 use Carbon\Carbon;
-use StepUpDream\DreamAbility\Database\Migrations\BaseMigrationRepository;
+use StepUpDream\DreamAbility\Database\Migrations\Basic\MigrationRepositoryInterface;
+use StepUpDream\DreamAbility\Test\Migration\BaseMigrationRepositoryMock;
 
-class MigrationRepository extends BaseMigrationRepository implements MigrationRepositoryInterface
+class MigrationRepositoryMock extends BaseMigrationRepositoryMock implements MigrationRepositoryInterface
 {
+    /**
+     * @param  mixed[]  $initialData
+     */
+    public function __construct(array $initialData = [])
+    {
+        $this->createRepository();
+        $this->table = $initialData;
+    }
+
     /**
      * Create the migration repository data store.
      *
@@ -16,16 +26,7 @@ class MigrationRepository extends BaseMigrationRepository implements MigrationRe
      */
     public function createRepository(): void
     {
-        $schema = $this->getConnection()->getSchemaBuilder();
-
-        if (! $schema->hasTable($this->tableName)) {
-            $schema->create($this->tableName, function ($table) {
-                $table->bigIncrements('id');
-                $table->string('table_name');
-                $table->string('version');
-                $table->timestamp('created_at')->nullable();
-            });
-        }
+        $this->tableKey = ['id', 'table_name', 'version', 'created_at'];
     }
 
     /**
@@ -44,7 +45,7 @@ class MigrationRepository extends BaseMigrationRepository implements MigrationRe
             'created_at' => $timestamp,
         ];
 
-        $this->table()->insert($record);
+        $this->table[] = $record;
     }
 
     /**
@@ -65,7 +66,12 @@ class MigrationRepository extends BaseMigrationRepository implements MigrationRe
      */
     public function findVersionByTableName(string $tableName): ?string
     {
-        return $this->table()->where('table_name', $tableName)->orderByDesc('version')->first()?->version;
+        $result = $this->table()
+            ->where('table_name', $tableName)
+            ->sortByDesc('version')
+            ->first();
+
+        return $result['version'] ?? null;
     }
 
     /**
@@ -94,16 +100,5 @@ class MigrationRepository extends BaseMigrationRepository implements MigrationRe
     public function getTableNameByVersion(string $version): array
     {
         return $this->table()->where('version', $version)->pluck('table_name')->all();
-    }
-
-    /**
-     * Determine if the given table has given columns.
-     *
-     * @param  string[]  $columns
-     * @return bool
-     */
-    public function hasColumns(array $columns): bool
-    {
-        return $this->getConnection()->getSchemaBuilder()->hasColumns($this->tableName, $columns);
     }
 }

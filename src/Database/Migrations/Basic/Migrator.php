@@ -8,12 +8,11 @@ use Illuminate\Console\OutputStyle;
 use Illuminate\Console\View\Components\Info;
 use Illuminate\Console\View\Components\Warn;
 use Illuminate\Database\Connection;
-use Illuminate\Database\ConnectionInterface;
-use Illuminate\Database\ConnectionResolverInterface as Resolver;
-use Illuminate\Database\Schema\Grammars\Grammar;
+use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Facades\File;
 use LogicException;
 use SplFileInfo;
+use StepUpDream\DreamAbility\Database\Migrations\Migration;
 use StepUpDream\DreamAbilitySupport\Console\View\Components\Task;
 use StepUpDream\DreamAbilitySupport\Supports\File\FileOperation;
 
@@ -35,11 +34,11 @@ class Migrator
 
     /**
      * @param  \StepUpDream\DreamAbilitySupport\Supports\File\FileOperation  $fileOperation
-     * @param  \Illuminate\Database\ConnectionResolverInterface  $resolver
+     * @param  \Illuminate\Database\DatabaseManager  $databaseManager
      */
     public function __construct(
         protected FileOperation $fileOperation,
-        protected Resolver $resolver
+        protected DatabaseManager $databaseManager
     ) {
     }
 
@@ -66,7 +65,7 @@ class Migrator
     /**
      * Warn if a migration has been performed in the past but the migration file does not exist.
      *
-     * @param  array  $connectionNames
+     * @param  string[]  $connectionNames
      * @param  string  $migrationDirectoryPath
      */
     public function verifyMigration(array $connectionNames, string $migrationDirectoryPath): void
@@ -108,14 +107,14 @@ class Migrator
     {
         /** @var \StepUpDream\DreamAbility\Database\Migrations\Migration $migration */
         $migration = File::getRequire($file->getRealPath());
-        $connection = $this->resolveConnection($migration->connectionName());
+        $migrationRepository = $this->migrationRepository($migration->connectionName());
+        $connection = $migrationRepository->getConnection();
 
         if (! method_exists($migration, 'up')) {
             throw new LogicException("Specify 'up' in the method : ".$file->getRealPath());
         }
 
         // Already processed migrations shall not be duplicated.
-        $migrationRepository = $this->migrationRepository($migration->connectionName());
         $beforeVersion = $migrationRepository->findVersionByTableName($migration->tableName());
         if ($version <= $beforeVersion) {
             return 'SKIP';
@@ -125,9 +124,7 @@ class Migrator
             $migration->up();
         };
 
-        $this->getSchemaGrammar($connection)->supportsSchemaTransactions() && $migration->withinTransaction
-            ? $connection->transaction($callback)
-            : $callback();
+        $this->useTransactions($connection, $migration) ? $connection->transaction($callback) : $callback();
 
         $this->log($migration->connectionName(), $migration->tableName(), $version);
 
@@ -135,34 +132,15 @@ class Migrator
     }
 
     /**
-     * Get the schema grammar out of a migration connection.
+     * Whether to use transactions.
      *
      * @param  \Illuminate\Database\Connection  $connection
-     * @return \Illuminate\Database\Schema\Grammars\Grammar
-     *
-     * @see \Illuminate\Database\Migrations\Migrator::getSchemaGrammar()
+     * @param  \StepUpDream\DreamAbility\Database\Migrations\Migration  $migration
+     * @return bool
      */
-    protected function getSchemaGrammar(Connection $connection): Grammar
+    protected function useTransactions(Connection $connection, Migration $migration): bool
     {
-        $grammar = $connection->getSchemaGrammar();
-        if ($grammar === null) {
-            $connection->useDefaultSchemaGrammar();
-
-            $grammar = $connection->getSchemaGrammar();
-        }
-
-        return $grammar;
-    }
-
-    /**
-     * Resolve the database connection instance.
-     *
-     * @param  string  $connection
-     * @return \Illuminate\Database\ConnectionInterface|\Illuminate\Database\Connection
-     */
-    protected function resolveConnection(string $connection): ConnectionInterface|Connection
-    {
-        return $this->resolver->connection($connection);
+        return $connection->getSchemaGrammar()->supportsSchemaTransactions() && $migration->withinTransaction;
     }
 
     /**
@@ -179,7 +157,7 @@ class Migrator
     }
 
     /**
-     * Determine if the migration repository exists.
+     * Determine if the migration table exists.
      *
      * @param  string  $connectionName
      * @return bool
@@ -193,7 +171,7 @@ class Migrator
      * Determine if the given table has given columns.
      *
      * @param  string  $connectionName
-     * @param  array  $columns
+     * @param  string[]  $columns
      * @return bool
      */
     public function repositoryColumnExists(string $connectionName, array $columns): bool
@@ -218,17 +196,29 @@ class Migrator
      * @param  string  $connectionName
      * @return \StepUpDream\DreamAbility\Database\Migrations\Basic\MigrationRepository
      */
-    protected function migrationRepository(string $connectionName): MigrationRepository
+    protected function migrationRepository(string $connectionName): mixed
     {
         if (isset($this->migrationRepositories[$connectionName])) {
             return $this->migrationRepositories[$connectionName];
         }
 
-        $tableName = config('stepupdream.migration.basic.version_control_table_name');
-        $migrationRepository = new MigrationRepository($connectionName, $this->resolver, $tableName);
-        $this->migrationRepositories[$connectionName] = $migrationRepository;
+        $this->migrationRepositories[$connectionName] = $this->makeMigrationRepository($connectionName);
 
         return $this->migrationRepositories[$connectionName];
+    }
+
+    /**
+     * Make repository to manipulate version control tables.
+     *
+     * @param  string  $connectionName
+     * @return MigrationRepository
+     */
+    protected function makeMigrationRepository(string $connectionName): MigrationRepository
+    {
+        /** @var \StepUpDream\DreamAbility\Database\Migrations\Basic\MigrationRepository $migrationRepository */
+        $migrationRepository = app(MigrationRepositoryInterface::class, [$connectionName]);
+
+        return $migrationRepository;
     }
 
     /**
@@ -241,6 +231,16 @@ class Migrator
      */
     protected function log(string $connectionName, string $tableName, string $version): void
     {
-        $this->migrationRepository($connectionName)->log($tableName, $version);
+        $migrationRepository = $this->migrationRepository($connectionName);
+        if (! $this->repositoryExists($connectionName)) {
+            throw new LogicException('The table for version control does not exist.');
+        }
+
+        $result = $migrationRepository->existTargetVersion($tableName, $version);
+        if (empty($result)) {
+            return;
+        }
+
+        $migrationRepository->insert($tableName, $version);
     }
 }

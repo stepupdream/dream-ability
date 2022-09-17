@@ -4,22 +4,22 @@ declare(strict_types=1);
 
 namespace StepUpDream\DreamAbility\Database\Migrations;
 
-use Illuminate\Database\ConnectionInterface;
-use Illuminate\Database\ConnectionResolverInterface as Resolver;
+use Illuminate\Database\Connection;
+use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
 
-abstract class BaseMigrationRepository
+abstract class BaseMigrationRepository implements BaseMigrationRepositoryInterface
 {
     /**
      * Create a new database migration repository instance.
      *
      * @param  string  $connectionName
-     * @param  \Illuminate\Database\ConnectionResolverInterface  $resolver
+     * @param  \Illuminate\Database\DatabaseManager  $databaseManager
      * @param  string  $tableName
      */
     public function __construct(
         protected string $connectionName,
-        protected Resolver $resolver,
+        protected DatabaseManager $databaseManager,
         protected string $tableName
     ) {
     }
@@ -29,13 +29,13 @@ abstract class BaseMigrationRepository
      *
      * @return \Illuminate\Database\Connection
      */
-    protected function getConnection(): ConnectionInterface
+    public function getConnection(): Connection
     {
-        return $this->resolver->connection($this->connectionName);
+        return $this->databaseManager->connection($this->connectionName);
     }
 
     /**
-     * Determine if the migration repository exists.
+     * Determine if the migration table exists.
      *
      * @return bool
      */
@@ -53,11 +53,4 @@ abstract class BaseMigrationRepository
     {
         return $this->getConnection()->table($this->tableName)->useWritePdo();
     }
-
-    /**
-     * Create the migration repository data store.
-     *
-     * @return void
-     */
-    abstract public function createRepository(): void;
 }
