@@ -130,6 +130,7 @@ class MigrateCommandTest extends TestCase
         $migratorMock->setOutput($style);
 
         // run
+        // To avoid errors in areas other than the original test area, test in inherited classes.
         $migrateCommand = new  MigrateCommand($fileOperation, $migratorMock, $style);
         $migrateCommand->handle();
     }

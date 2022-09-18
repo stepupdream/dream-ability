@@ -28,7 +28,7 @@ class Migrator
     /**
      * Repository to manipulate version control tables. [key: connection name]
      *
-     * @var MigrationRepository[]
+     * @var MigrationRepositoryInterface[]
      */
     protected array $migrationRepositories = [];
 
@@ -194,7 +194,7 @@ class Migrator
      * Get repository to manipulate version control tables.
      *
      * @param  string  $connectionName
-     * @return \StepUpDream\DreamAbility\Database\Migrations\Basic\MigrationRepository
+     * @return \StepUpDream\DreamAbility\Database\Migrations\Basic\MigrationRepositoryInterface
      */
     protected function migrationRepository(string $connectionName): mixed
     {
@@ -211,14 +211,11 @@ class Migrator
      * Make repository to manipulate version control tables.
      *
      * @param  string  $connectionName
-     * @return MigrationRepository
+     * @return MigrationRepositoryInterface
      */
-    protected function makeMigrationRepository(string $connectionName): MigrationRepository
+    protected function makeMigrationRepository(string $connectionName): MigrationRepositoryInterface
     {
-        /** @var \StepUpDream\DreamAbility\Database\Migrations\Basic\MigrationRepository $migrationRepository */
-        $migrationRepository = app(MigrationRepositoryInterface::class, [$connectionName]);
-
-        return $migrationRepository;
+        return app(MigrationRepositoryInterface::class, [$connectionName]);
     }
 
     /**
